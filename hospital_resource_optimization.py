@@ -50,3 +50,36 @@ df_test.describe()
 # Checking for missing values in Training dataset
 df_train.isnull().sum().any()
 df_train.loc[:, df_train.isna().any()].isna().sum().sort_values(ascending=False)
+df_test.loc[:, df_test.isna().any()].isna().sum().sort_values(ascending=False)
+# Check null/missing values inside dataset in descending order
+df_train.isnull().sum().sort_values(ascending=False)
+# Plot missing values in Training dataset
+plt.figure(figsize = (16,6))
+sns.heatmap(df_train.isnull(), yticklabels= False, cbar= False, cmap='viridis')
+# Plot missing values in Test dataset
+plt.figure(figsize = (16,6))
+sns.heatmap(df_test.isnull(), yticklabels= False, cbar= False, cmap='viridis')
+# Checking for missing values in test dataset
+df_test.isnull().sum().any()
+# find missing values in Training dataset according to their percentage
+missing_perc = (df_train.isnull().sum()/len(df_train)*100).sort_values(ascending=False)
+missing_perc[missing_perc != 0]
+# Plot the null values in Training Dataset by their percentage
+missing_perc[missing_perc != 0].plot(kind='bar')
+plt.xlabel("Columns")
+plt.ylabel("Percentage")
+plt.title('Percentage of Missing Values in each columns')
+# find missing values in Test dataset according to their percentage
+missing_perc_test = (df_test.isnull().sum()/len(df_test)*100).sort_values(ascending=False)
+missing_perc_test[missing_perc_test != 0]
+# Plot the null values in Test Dataset by their percentage
+missing_perc_test[missing_perc_test != 0].plot(kind='bar')
+plt.xlabel("Columns")
+plt.ylabel("Percentage")
+plt.title('Percentage of Missing Values in each columns')
+# check any duplication
+df_train.duplicated(subset=df_train.columns.difference(['case_id'])).any()
+df_train.duplicated(subset=df_train.columns.difference(['case_id'])).sum()
+df_train.duplicated(subset=df_train.columns).sum()
+df_test.duplicated(subset=df_test.columns.difference(['case_id'])).sum()
+df_train[df_train.duplicated(subset=df_train.columns.difference(['case_id']), keep=False)]
