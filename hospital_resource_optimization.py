@@ -83,3 +83,170 @@ df_train.duplicated(subset=df_train.columns.difference(['case_id'])).sum()
 df_train.duplicated(subset=df_train.columns).sum()
 df_test.duplicated(subset=df_test.columns.difference(['case_id'])).sum()
 df_train[df_train.duplicated(subset=df_train.columns.difference(['case_id']), keep=False)]
+
+#Remove Anamolies from Dataset
+df_train.drop_duplicates(subset=df_train.columns.difference(['case_id']), inplace=True)
+print(df_train.shape)
+df_train.head()
+# first we have to check the dataset
+df_train['Stay'].value_counts().sort_index()
+df_train[['Stay','Age']].value_counts().sort_index()
+df_train['Age'].value_counts().sort_index()
+df_train.columns
+df_train['Severity of Illness'].value_counts()
+df_train['Department'].value_counts()
+df_train['Ward_Type'].value_counts()
+df_train['Bed Grade'].value_counts().sort_index()
+#Check Unique values in all the columns along with maximum and minimum values in the Numerical columns
+# Check Unique values, data type of each column and Minimum and Maximum values of Numerical columns
+for column in df_train.columns:
+    unique_values = df_train[column].unique()
+    type_value = df_train[column].dtype
+    if len(unique_values) > 10:
+        unique_values = unique_values[:10]
+    total_unique_values = df_train[column].nunique()
+    print(f"Data Type of {column}: {type_value}")
+    print(f"Total Unique values in {column}: {total_unique_values}")
+    if (df_train[column].dtype == 'int64') or (df_train[column].dtype == 'float64'):
+       print(f"Minimum value: {df_train[column].min()},   Maximum value: {df_train[column].max()}")
+    print(f"Unique values in {column}: {unique_values}\n")
+# Lets separate Numerical and categorical columns to visualize properly
+
+num_col_train = df_train.select_dtypes(include=np.number).columns.difference(['case_id','patientid'])
+cat_col_train = df_train.select_dtypes(include=['object','category']).columns
+# Visualize Numerical columns
+
+for col in num_col_train:
+    print(col)
+    print(f"Minimum value: {df_train[col].min()},   Maximum value: {df_train[col].max()}")  
+    print('Skew :', round(df_train[col].skew(),2))
+    plt.figure(figsize = (15,4))
+    plt.subplot(1,2,1)
+    df_train[col].hist(grid = False)
+    # sns.histplot(data=df_train, x=df_train[col], kde=True)
+    plt.ylabel('Count')
+    plt.title(col)
+    plt.subplot(1,2,2)
+    plt.title(col)
+    sns.boxplot(x=df_train[col])
+    plt.show()
+# Print Categorical columns and their value counts
+print(cat_col_train)
+for i,col in enumerate(cat_col_train):
+    print(df_train[col].value_counts())
+    print('\n')
+# Distribution of all Categorical columns
+cat_col_train = df_train.select_dtypes(include=['object','category']).columns
+print(f"Categorical Columns are : {cat_col_train}")
+# Visualize Categorical columns 
+fig, axes = plt.subplots(nrows=6, ncols=2, figsize=(18, 26))
+# Increase vertical spacing
+plt.subplots_adjust(hspace=0.5)
+# Set the supertitle
+fig.suptitle('Bar plot for all categorical variables in the dataset with their Status\n', fontsize=20)
+# Adjust the spacing between the supertitle and subplots
+plt.subplots_adjust(top=0.95)
+# Iterate over the columns and create count plots
+for i, column in enumerate(cat_col_train):
+    row = i // 2
+    col = i % 2
+    sns.countplot(ax=axes[row, col], x=column, data=df_train) # , hue='Stay')
+   
+    total_count = len(df_train[column])
+
+    for p in axes[row,col].patches:
+        percentage = f'{100 * p.get_height() / total_count:.1f}%'
+        x_pos = p.get_x() + p.get_width() / 2
+        y_pos = p.get_height()
+        axes[row,col].annotate(percentage, (x_pos, y_pos), ha='center', va='bottom')
+# Adjust the layout and display the plots
+plt.tight_layout()
+plt.show()
+# Visualization of correlation in numerical columns
+plt.figure(figsize=(12,8))
+sns.heatmap(df_train[num_col_train].corr(),cbar = True, cmap='coolwarm', annot=True)
+import plotly.express as px
+# piechart
+
+df_pie = df_train['Stay'].value_counts().reset_index()
+df_pie.columns = ['Stay', 'count']
+fig_pie = px.pie(df_pie, values='count', names='Stay', title="Pie Plot showing distribution of the Length of Stay in the Hospital") #, category_orders={'Stay':'0-10'})
+
+fig_pie.show()
+#Maximum cases of patients (27.5%) staying in Hospital for 21-30 days, at 2nd number more cases of patients (24.5%) staying for 11-20 days, at 3rd number cases of patients (17.3%) staying are 31-40 days as shown in above pie chart.
+df_train.columns
+# create sunburst plot on the dataset
+
+# Create a sunburst plot
+
+fig = px.sunburst(df_train, 
+                  path=['Severity of Illness', 'Type of Admission','Department','Ward_Type', 'Stay'], 
+                  values='Bed Grade' , color='Type of Admission', title="Chart shows the distribution of the Status ")
+fig.update_layout(width = 800, height= 800)
+# Show the plot
+fig.show()
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.compose import ColumnTransformer
+from xgboost import XGBClassifier 
+#import grid search cv for cross validation
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import accuracy_score, classification_report, log_loss, make_scorer
+# train test split of dataset in python
+from sklearn.model_selection import train_test_split
+
+# Splitting the DataFrame into features (X) and target variable (y)
+X_train = df_train.drop(['Stay', 'case_id','patientid'], axis=1)  
+y_train = df_train['Stay']  
+
+X_test = df_test.drop(['case_id','patientid'], axis=1) 
+
+# Splitting the data into train and test sets
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Lets separate Numerical and categorical columns to visualize properly
+num_col = X_train.select_dtypes(include=np.number).columns
+cat_col = X_train.select_dtypes(include=['object']).columns
+# Create a dictionaries of list of models to evaluate performance with hyperparameters
+models = { 
+          'DecisionTreeClassifier' : (DecisionTreeClassifier(), {'criterion' : ['gini'],'max_depth': [None], 'splitter': ['best']}),
+          'RandomForestClass' : (RandomForestClassifier(n_jobs= -1), {'criterion' : ['gini'],'n_estimators': [10,100], 'max_depth': [None]}),
+          'AdaBoostClassifier' : (AdaBoostClassifier(), {'n_estimators': [10,100], 'algorithm': ['SAMME', 'SAMME.R']}),
+         # 'GradientBoostingClassifier' : (GradientBoostingClassifier(), {'criterion' : ['friedman_mse','squared_error'], 'n_estimators': [10]}),
+         # 'XGBClassifier' : (XGBClassifier(), {'n_estimators': [10], 'learning_rate': [0.1]}),          
+          }
+
+# Define the column transformer for preprocessing
+preprocessing = ColumnTransformer(
+    transformers=[
+        ('numeric', StandardScaler(), num_col),  # Replace with actual numeric column names
+        ('categorical', OneHotEncoder(), cat_col)  # Replace with actual categorical column name
+    ])
+
+# LogLoss = make_scorer(log_loss, greater_is_better=False, needs_proba=True)
+
+for name, (model, params) in models.items():
+    # create a pipline
+    # pipeline = GridSearchCV(model, params, cv=5)
+    pipeline = Pipeline([
+     ('preprocess', preprocessing),
+     ('Imputer', SimpleImputer()),
+     ('classify', GridSearchCV(model, params, cv=5, verbose=3))
+    ])
+    # fit the pipeline
+    pipeline.fit(X_train, y_train)
+    
+    # make prediction from each model
+    y_pred = pipeline.predict(X_test)
+    
+    y_pred_prob = pipeline.predict_proba(X_test)
+    # print the performing metric
+    # Calculate accuracy
+    print(f"Model Name: {name}")
+    print("Best Parameters: ", pipeline.named_steps['classify'].best_params_)
+    print("Best Score: ", pipeline.named_steps['classify'].best_score_)
+    print("Best Estimator: ", pipeline.named_steps['classify'].best_estimator_)
